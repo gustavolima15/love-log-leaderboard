@@ -465,7 +465,7 @@ function HistoryView({
                   </div>
                 );
               })}
-            </>
+            </Fragment>
           ))}
         </div>
       </CardContent>
