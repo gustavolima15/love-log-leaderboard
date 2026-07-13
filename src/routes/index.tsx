@@ -427,8 +427,8 @@ function HistoryView({
             </div>
           ))}
           {dates.map((d) => (
-            <>
-              <div key={`d-${d}`} className="p-3 bg-card font-medium">
+            <Fragment key={d}>
+              <div className="p-3 bg-card font-medium">
                 {formatDate(d)}
               </div>
               {participants.map((p) => {
