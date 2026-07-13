@@ -14,7 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      challenge_config: {
+        Row: {
+          id: number
+          initial_pot: number
+          start_date: string
+          total_days: number
+        }
+        Insert: {
+          id?: number
+          initial_pot?: number
+          start_date: string
+          total_days?: number
+        }
+        Update: {
+          id?: number
+          initial_pot?: number
+          start_date?: string
+          total_days?: number
+        }
+        Relationships: []
+      }
+      daily_logs: {
+        Row: {
+          cardio_minutes: number
+          created_at: string
+          diet_followed: boolean
+          extra_free_meals: number
+          id: string
+          log_date: string
+          notes: string | null
+          participant_id: string
+          updated_at: string
+          workout_done: boolean
+        }
+        Insert: {
+          cardio_minutes?: number
+          created_at?: string
+          diet_followed?: boolean
+          extra_free_meals?: number
+          id?: string
+          log_date: string
+          notes?: string | null
+          participant_id: string
+          updated_at?: string
+          workout_done?: boolean
+        }
+        Update: {
+          cardio_minutes?: number
+          created_at?: string
+          diet_followed?: boolean
+          extra_free_meals?: number
+          id?: string
+          log_date?: string
+          notes?: string | null
+          participant_id?: string
+          updated_at?: string
+          workout_done?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_logs_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participants: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
