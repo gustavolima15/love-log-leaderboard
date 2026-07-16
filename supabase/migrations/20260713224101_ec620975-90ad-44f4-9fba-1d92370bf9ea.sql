@@ -55,3 +55,14 @@ $$ LANGUAGE plpgsql SET search_path = public;
 
 CREATE TRIGGER daily_logs_updated_at BEFORE UPDATE ON public.daily_logs
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+INSERT INTO public.challenge_config (id, start_date, total_days, initial_pot)
+VALUES (1, '2026-07-13', 90, 400)
+ON CONFLICT (id) DO UPDATE
+SET start_date = EXCLUDED.start_date,
+    total_days = EXCLUDED.total_days,
+    initial_pot = EXCLUDED.initial_pot;
+
+INSERT INTO public.participants (name)
+VALUES ('Gustavo'), ('Geovana')
+ON CONFLICT (name) DO NOTHING;
