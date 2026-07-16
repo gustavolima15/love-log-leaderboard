@@ -77,10 +77,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Desafio Fitness do Casal — 90 Dias" },
-      { name: "description", content: "Gustavo  vs Geovana: 90 dias de treino, cardio e dieta com ranking, pontos e caixinha." },
-      { property: "og:title", content: "Desafio Fitness do Casal — 90 Dias" },
-      { property: "og:description", content: "Gustavo vs Geovana: 90 dias de treino, cardio e dieta com ranking, pontos e caixinha." },
+      { title: "Desafio Fitness do Casal" },
+      { name: "description", content: "Gustavo vs Geovana em 90 dias de treino, cardio e dieta com ranking, pontos e caixinha." },
+      { property: "og:title", content: "Desafio Fitness do Casal" },
+      { property: "og:description", content: "Gustavo vs Geovana em 90 dias de treino, cardio e dieta com ranking, pontos e caixinha." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -100,7 +100,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
