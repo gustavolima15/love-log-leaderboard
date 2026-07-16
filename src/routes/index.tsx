@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast, Toaster } from "sonner";
-import { Dumbbell, Flame, Salad, Trophy, Calendar, Zap, AlertTriangle, Coins } from "lucide-react";
+import { Dumbbell, Flame, Salad, Trophy, Calendar, Zap, AlertTriangle, Coins, PencilLine } from "lucide-react";
 import {
   computeStats,
   FINE_VALUE,
@@ -27,12 +27,15 @@ export const Route = createFileRoute("/")({ component: Home });
 
 type Participant = { id: string; name: string };
 type Config = { start_date: string; total_days: number; initial_pot: number };
+type EditTarget = { participantId: string; logDate: string };
 
 function Home() {
   const [config, setConfig] = useState<Config | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("log");
+  const [selectedEdit, setSelectedEdit] = useState<EditTarget | null>(null);
 
   async function loadAll() {
     const [c, p, l] = await Promise.all([
@@ -86,6 +89,9 @@ function Home() {
 
   const potFromFines = stats.reduce((sum, s) => sum + s.stats.totalFines * FINE_VALUE, 0);
   const totalPot = config.initial_pot + potFromFines;
+  const selectedParticipant = selectedEdit
+    ? participants.find((p) => p.id === selectedEdit.participantId) ?? null
+    : null;
 
   return (
     <div className="min-h-screen">
@@ -98,7 +104,7 @@ function Home() {
             </div>
             <div>
               <h1 className="font-bold text-lg leading-tight">Desafio Fitness do Casal</h1>
-              <p className="text-xs text-muted-foreground">Gusta vs Geovana · 90 dias</p>
+              <p className="text-xs text-muted-foreground">Gustavo vs Geovana · 90 dias</p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-2">
@@ -171,7 +177,7 @@ function Home() {
           ))}
         </section>
 
-        <Tabs defaultValue="log" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-3 w-full max-w-md">
             <TabsTrigger value="log">Registrar</TabsTrigger>
             <TabsTrigger value="history">Histórico</TabsTrigger>
@@ -179,6 +185,31 @@ function Home() {
           </TabsList>
 
           <TabsContent value="log" className="mt-4">
+            {selectedParticipant && selectedEdit && (
+              <div className="mb-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold">Editando registro</div>
+                    <div className="text-xs text-muted-foreground">
+                      {selectedParticipant.name} em {formatDate(selectedEdit.logDate)}
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedEdit(null)}>
+                    Fechar
+                  </Button>
+                </div>
+                <LogForm
+                  key={`${selectedParticipant.id}-${selectedEdit.logDate}`}
+                  participant={selectedParticipant}
+                  logs={logs}
+                  onSaved={async () => {
+                    await loadAll();
+                    setSelectedEdit(null);
+                  }}
+                  initialDate={selectedEdit.logDate}
+                />
+              </div>
+            )}
             <div className="grid md:grid-cols-2 gap-4">
               {participants.map((p) => (
                 <LogForm key={p.id} participant={p} logs={logs} onSaved={loadAll} />
@@ -187,7 +218,15 @@ function Home() {
           </TabsContent>
 
           <TabsContent value="history" className="mt-4">
-            <HistoryView participants={participants} logs={logs} startDate={config.start_date} />
+            <HistoryView
+              participants={participants}
+              logs={logs}
+              startDate={config.start_date}
+              onEdit={(participantId, logDate) => {
+                setSelectedEdit({ participantId, logDate });
+                setActiveTab("log");
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="rules" className="mt-4">
@@ -216,12 +255,14 @@ function LogForm({
   participant,
   logs,
   onSaved,
+  initialDate,
 }: {
   participant: Participant;
   logs: DailyLog[];
   onSaved: () => void;
+  initialDate?: string;
 }) {
-  const [date, setDate] = useState(todayISO());
+  const [date, setDate] = useState(initialDate ?? todayISO());
   const existing = useMemo(
     () => logs.find((l) => l.participant_id === participant.id && l.log_date === date),
     [logs, participant.id, date],
@@ -235,12 +276,13 @@ function LogForm({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (initialDate) setDate(initialDate);
     setWorkout(existing?.workout_done ?? false);
     setCardio(existing?.cardio_minutes ?? 0);
     setDiet(existing?.diet_followed ?? false);
     setFreeExtra(existing?.extra_free_meals ?? 0);
     setNotes(existing?.notes ?? "");
-  }, [existing]);
+  }, [existing, initialDate]);
 
   const points = pointsForLog({ workout_done: workout, cardio_minutes: cardio, diet_followed: diet });
 
@@ -395,10 +437,12 @@ function HistoryView({
   participants,
   logs,
   startDate,
+  onEdit,
 }: {
   participants: Participant[];
   logs: DailyLog[];
   startDate: string;
+  onEdit: (participantId: string, logDate: string) => void;
 }) {
   const dates = Array.from(new Set(logs.map((l) => l.log_date))).sort((a, b) => b.localeCompare(a));
 
@@ -442,24 +486,36 @@ function HistoryView({
                 const pts = pointsForLog(l);
                 return (
                   <div key={`${p.id}-${d}`} className="p-3 bg-card text-xs space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs">
-                        +{pts}
-                      </Badge>
-                      {l.workout_done && <Dumbbell className="size-3 text-primary" />}
-                      {l.cardio_minutes > 0 && (
-                        <span className="flex items-center gap-0.5 text-accent">
-                          <Flame className="size-3" />
-                          {l.cardio_minutes}m
-                        </span>
-                      )}
-                      {l.diet_followed && <Salad className="size-3 text-success" />}
-                      {l.extra_free_meals > 0 && (
-                        <span className="flex items-center gap-0.5 text-destructive">
-                          <AlertTriangle className="size-3" />
-                          {l.extra_free_meals}
-                        </span>
-                      )}
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="secondary" className="text-xs">
+                          +{pts}
+                        </Badge>
+                        {l.workout_done && <Dumbbell className="size-3 text-primary" />}
+                        {l.cardio_minutes > 0 && (
+                          <span className="flex items-center gap-0.5 text-accent">
+                            <Flame className="size-3" />
+                            {l.cardio_minutes}m
+                          </span>
+                        )}
+                        {l.diet_followed && <Salad className="size-3 text-success" />}
+                        {l.extra_free_meals > 0 && (
+                          <span className="flex items-center gap-0.5 text-destructive">
+                            <AlertTriangle className="size-3" />
+                            {l.extra_free_meals}
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => onEdit(p.id, d)}
+                      >
+                        <PencilLine className="size-3 mr-1" />
+                        Editar
+                      </Button>
                     </div>
                     {l.notes && <div className="text-muted-foreground truncate">{l.notes}</div>}
                   </div>
