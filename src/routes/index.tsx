@@ -12,7 +12,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast, Toaster } from "sonner";
-import { Dumbbell, Flame, Salad, Trophy, Calendar, Zap, AlertTriangle, Coins, PencilLine } from "lucide-react";
+import {
+  Dumbbell,
+  Flame,
+  Salad,
+  Trophy,
+  Calendar,
+  Zap,
+  AlertTriangle,
+  Coins,
+  PencilLine,
+  Download,
+  WifiOff,
+} from "lucide-react";
 import {
   computeStats,
   FINE_VALUE,
@@ -28,6 +40,10 @@ export const Route = createFileRoute("/")({ component: Home });
 type Participant = { id: string; name: string };
 type Config = { start_date: string; total_days: number; initial_pot: number };
 type EditTarget = { participantId: string; logDate: string };
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
 
 function Home() {
   const [config, setConfig] = useState<Config | null>(null);
@@ -36,6 +52,9 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("log");
   const [selectedEdit, setSelectedEdit] = useState<EditTarget | null>(null);
+  const [canInstallApp, setCanInstallApp] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
 
   async function loadAll() {
     const [c, p, l] = await Promise.all([
@@ -55,10 +74,46 @@ function Home() {
       .channel("daily_logs_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "daily_logs" }, loadAll)
       .subscribe();
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+      setCanInstallApp(true);
+    };
+
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+      setCanInstallApp(false);
+      toast.success("App instalado com sucesso");
+    };
+
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt as EventListener);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    updateOnlineStatus();
+
     return () => {
       supabase.removeChannel(ch);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt as EventListener);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
     };
   }, []);
+
+  async function installApp() {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === "accepted") {
+      toast.success("Instalação iniciada");
+    }
+    setInstallPrompt(null);
+    setCanInstallApp(false);
+  }
 
   if (loading || !config) {
     return (
@@ -108,6 +163,16 @@ function Home() {
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-2">
+            {!isOnline && (
+              <Badge variant="secondary" className="gap-1">
+                <WifiOff className="size-3" /> Offline
+              </Badge>
+            )}
+            {canInstallApp && (
+              <Button type="button" variant="secondary" size="sm" className="gap-1" onClick={installApp}>
+                <Download className="size-3" /> Instalar
+              </Button>
+            )}
             <Badge variant="outline" className="gap-1">
               <Calendar className="size-3" />
               {started ? `Dia ${dayNum}/${config.total_days}` : `Início em ${config.start_date}`}
