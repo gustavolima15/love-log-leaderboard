@@ -47,6 +47,7 @@ export type Database = {
           participant_id: string
           updated_at: string
           workout_done: boolean
+          workout_justification: string | null
         }
         Insert: {
           cardio_minutes?: number
@@ -59,6 +60,7 @@ export type Database = {
           participant_id: string
           updated_at?: string
           workout_done?: boolean
+          workout_justification?: string | null
         }
         Update: {
           cardio_minutes?: number
@@ -71,6 +73,7 @@ export type Database = {
           participant_id?: string
           updated_at?: string
           workout_done?: boolean
+          workout_justification?: string | null
         }
         Relationships: [
           {

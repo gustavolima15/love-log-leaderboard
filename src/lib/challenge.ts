@@ -3,6 +3,7 @@ export type DailyLog = {
   participant_id: string;
   log_date: string; // yyyy-mm-dd
   workout_done: boolean;
+  workout_justification: string | null;
   cardio_minutes: number;
   diet_followed: boolean;
   extra_free_meals: number;
@@ -17,6 +18,10 @@ export function cardioPoints(min: number): number {
   if (min >= 20) return 2;
   if (min >= 10) return 1;
   return 0;
+}
+
+export function hasWorkoutJustification(value: string | null | undefined): boolean {
+  return Boolean(value?.trim());
 }
 
 export function pointsForLog(l: Pick<DailyLog, "workout_done" | "cardio_minutes" | "diet_followed">): number {
@@ -79,8 +84,9 @@ export function computeStats(logs: DailyLog[], startDate: string, totalDays: num
 
     const wi = weekIndex(startDate, l.log_date);
     if (wi < 0) continue;
-    const w = byWeek.get(wi) ?? { workouts: 0, extras: 0 };
+    const w = byWeek.get(wi) ?? { workouts: 0, extras: 0, excused: 0 };
     if (l.workout_done) w.workouts++;
+    else if (hasWorkoutJustification(l.workout_justification)) w.excused++;
     w.extras += l.extra_free_meals;
     byWeek.set(wi, w);
   }
@@ -92,7 +98,7 @@ export function computeStats(logs: DailyLog[], startDate: string, totalDays: num
   for (const [wi, w] of byWeek) {
     if (wi < currentWeek) {
       // completed week
-      const missed = Math.max(0, WEEKLY_WORKOUT_TARGET - w.workouts);
+      const missed = Math.max(0, WEEKLY_WORKOUT_TARGET - w.workouts - w.excused);
       fineCount += missed + w.extras;
     } else {
       // current week — only count extras already committed

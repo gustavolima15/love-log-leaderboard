@@ -334,6 +334,7 @@ function LogForm({
   );
 
   const [workout, setWorkout] = useState(false);
+  const [workoutJustification, setWorkoutJustification] = useState("");
   const [cardio, setCardio] = useState(0);
   const [diet, setDiet] = useState(false);
   const [freeExtra, setFreeExtra] = useState(0);
@@ -347,16 +348,19 @@ function LogForm({
     setDiet(existing?.diet_followed ?? false);
     setFreeExtra(existing?.extra_free_meals ?? 0);
     setNotes(existing?.notes ?? "");
+    setWorkoutJustification(existing?.workout_justification ?? "");
   }, [existing, initialDate]);
 
   const points = pointsForLog({ workout_done: workout, cardio_minutes: cardio, diet_followed: diet });
 
   async function save() {
     setSaving(true);
+    const normalizedJustification = workout ? null : workoutJustification.trim() || null;
     const payload = {
       participant_id: participant.id,
       log_date: date,
       workout_done: workout,
+      workout_justification: normalizedJustification,
       cardio_minutes: cardio,
       diet_followed: diet,
       extra_free_meals: freeExtra,
@@ -405,8 +409,29 @@ function LogForm({
               <div className="text-xs text-muted-foreground">+2 pontos</div>
             </div>
           </div>
-          <Switch checked={workout} onCheckedChange={setWorkout} />
+          <Switch
+            checked={workout}
+            onCheckedChange={(next) => {
+              setWorkout(next);
+              if (next) setWorkoutJustification("");
+            }}
+          />
         </div>
+
+        {!workout && (
+          <div>
+            <Label htmlFor={`w-just-${participant.id}`} className="text-xs">
+              Justificativa da ausência para não pagar multa
+            </Label>
+            <Textarea
+              id={`w-just-${participant.id}`}
+              value={workoutJustification}
+              onChange={(e) => setWorkoutJustification(e.target.value)}
+              placeholder="Ex.: doença, viagem, lesão, imprevisto pessoal..."
+              className="mt-1 min-h-[80px]"
+            />
+          </div>
+        )}
 
         <div className="p-3 rounded-lg bg-secondary/50">
           <div className="flex items-center gap-2 mb-2">
@@ -582,6 +607,11 @@ function HistoryView({
                         Editar
                       </Button>
                     </div>
+                    {l.workout_justification && (
+                      <div className="text-muted-foreground text-[10px] leading-relaxed break-words">
+                        Justificativa: {l.workout_justification}
+                      </div>
+                    )}
                     {l.notes && <div className="text-muted-foreground truncate">{l.notes}</div>}
                   </div>
                 );
